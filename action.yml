@@ -1,0 +1,23 @@
+name: Run actionlint
+
+inputs:
+  checkout:
+    required: false
+    default: true
+  args:
+    required: false
+    default: "-color"
+
+runs:
+  using: "composite"
+  steps:
+    - if: ${{ inputs.checkout }}
+      uses: actions/checkout@v4
+      with:
+        sparse-checkout: |
+          /.github/workflows/*.yml
+          /action.yml
+        sparse-checkout-cone-mode: false
+    - uses: docker://rhysd/actionlint@sha256:d1b3d067b912ea4cbf697750cee80f59114414365b916167b4c7b4cf9504ca9a # 1.7.5
+      with:
+        args: ${{ inputs.args }}

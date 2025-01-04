@@ -1,0 +1,70 @@
+name: Update actionlint
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+  pull-requests: write
+  repository-projects: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check latest actionlint
+        id: version-check
+        run: |
+          current=$(awk -F@ '/ uses: docker:\/\/rhysd\/actionlint@/ { print $2 }' action.yml)
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "::notice::current actionlint: $current"
+          tags_json=$(curl 'https://hub.docker.com/v2/namespaces/rhysd/repositories/actionlint/tags')
+          available=$(echo "$tags_json" | jq -r '.results[] | select(.name | test("\\d+\\.\\d+\\.\\d+")) | .digest + " # " + .name')
+          echo "available:"
+          echo "$available"
+          latest=$(echo "$available" | head -n 1)
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "::notice::latest actionlint: $latest"
+          if [ "$latest" = "$current" ]; then
+            echo "::notice::no need to update"
+            exit 0
+          fi
+          echo "from-to=from $(echo "$current" | cut -d' ' -f3) to $(echo "$latest" | cut -d' ' -f3)" >> "$GITHUB_OUTPUT"
+      - name: Check actionlint-update branch
+        id: branch-check
+        if: steps.version-check.outputs.from-to != ''
+        env:
+          LATEST: ${{ steps.version-check.outputs.latest }}
+        run: |
+          if git fetch origin actionlint-update && git show FETCH_HEAD:action.yml | grep -Fq "docker://rhysd/actionlint@$LATEST"; then
+            echo "::notice::no need to push"
+            exit 0
+          fi
+          git checkout -b actionlint-update
+          sed -i "s|docker://rhysd/actionlint@.*|docker://rhysd/actionlint@${LATEST}|g" action.yml
+          git add action.yml
+          echo "should-push=true" >> "$GITHUB_OUTPUT"
+      - name: create or update PR
+        if: steps.branch-check.outputs.should-push
+        env:
+          PR_TITLE: Bump actionlint ${{ steps.version-check.outputs.from-to }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git commit -m "$PR_TITLE"
+          git push --force origin actionlint-update
+          pr_state=$(gh pr status --json state --jq '.currentBranch.state')
+          if [ "$pr_state" = "OPEN" ]; then
+            gh pr edit --title "$PR_TITLE"
+          else
+            gh pr create --fill
+          fi
+          echo "::notice::PR: $(gh pr status --json url --jq '.currentBranch.url')"

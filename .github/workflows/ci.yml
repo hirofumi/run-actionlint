@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hirofumi/run-actionlint@main
+  tag-check:
+    runs-on: ubuntu-latest
+    outputs:
+      missing-tag: ${{ steps.tag-check.outputs.missing }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if tag exists or not
+        id: tag-check
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: |
+          tag=v$(awk -F@ '/ uses: docker:\/\/rhysd\/actionlint@/ { sub(/[^#]* [#] */, "", $2); print $2 }' action.yml)
+          if git ls-remote --tags origin "$tag" | grep .; then
+            echo "::notice::tag $tag already exists"
+          else
+            echo "missing=$tag" >> "$GITHUB_OUTPUT"
+          fi
+  tag-push:
+    if: success() && needs.tag-check.outputs.missing-tag != ''
+    needs: [actionlint, tag-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create and push tag if necessary
+        env:
+          tag: ${{ needs.tag-check.outputs.missing-tag }}
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git tag -m "" "$tag"
+          git push origin "$tag"
