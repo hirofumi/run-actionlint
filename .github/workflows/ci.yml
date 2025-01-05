@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: hirofumi/run-actionlint@main
   tag-check:
+    if: github.event_name == 'push' && github.ref_name == 'main'
     runs-on: ubuntu-latest
     outputs:
       missing-tag: ${{ steps.tag-check.outputs.missing }}
@@ -26,7 +27,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check if tag exists or not
         id: tag-check
-        if: github.event_name == 'push' && github.ref_name == 'main'
         run: |
           tag=v$(awk -F@ '/ uses: docker:\/\/rhysd\/actionlint@/ { sub(/[^#]* [#] */, "", $2); print $2 }' action.yml)
           if git ls-remote --tags origin "$tag" | grep .; then
