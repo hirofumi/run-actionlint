@@ -8,6 +8,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: docker://rhysd/actionlint@sha256:e3856d413f923accc4120884ff79f6bdba3dd53fd42884d325f21af61cc15ce0 # 1.7.6
+    - uses: docker://rhysd/actionlint:1.7.6@sha256:e3856d413f923accc4120884ff79f6bdba3dd53fd42884d325f21af61cc15ce0
       with:
         args: ${{ inputs.args }}

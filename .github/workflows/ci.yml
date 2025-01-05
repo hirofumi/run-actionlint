@@ -29,12 +29,12 @@ jobs:
       - name: Check if tag exists or not
         id: tag-check
         run: |
-          tag=v$(awk -F@ '/ uses: docker:\/\/rhysd\/actionlint@/ { sub(/[^#]* [#] */, "", $2); print $2 }' action.yml)
+          tag=v$(yq --expression '.runs.steps[].uses | capture("^docker://rhysd/actionlint:(?P<v>[^@]+)") | .v' action.yml)
           if git ls-remote --tags origin "$tag" | grep .; then
             echo "::notice::tag $tag already exists"
-          else
-            echo "missing=$tag" >> "$GITHUB_OUTPUT"
+            exit
           fi
+          echo "missing=$tag" >> "$GITHUB_OUTPUT"
   tag-push:
     if: success() && needs.tag-check.outputs.missing-tag != ''
     needs: [actionlint, tag-check]
