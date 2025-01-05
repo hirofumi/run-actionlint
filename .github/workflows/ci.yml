@@ -50,3 +50,20 @@ jobs:
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git tag -m "" "$tag"
           git push origin "$tag"
+  readme-update:
+    if: success()
+    needs: [tag-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update README.md
+        run: |
+          tag=v$(awk -F@ '/ uses: docker:\/\/rhysd\/actionlint@/ { sub(/[^#]* [#] */, "", $2); print $2 }' action.yml)
+          sed -i "s| uses: hirofumi/run-actionlint@[^ ]*| uses: hirofumi/run-actionlint@${tag}|g" README.md
+          git add README.md
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git commit -m "Update README.md"
+          git push origin main

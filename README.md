@@ -15,5 +15,5 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: hirofumi/run-actionlint@main
+      - uses: hirofumi/run-actionlint@v1.7.6
 ```
