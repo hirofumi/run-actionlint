@@ -12,7 +12,7 @@ on:
       - main
 
 jobs:
-  run:
+  actionlint:
     runs-on: ubuntu-latest
     steps:
       - uses: hirofumi/run-actionlint@v1.7.6
