@@ -1,0 +1,44 @@
+name: Update pull request from dependabot
+
+on:
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+
+jobs:
+  action-yml-update:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 2
+      - name: Check actionlint version
+        id: version-check
+        run: |
+          if ! git diff HEAD^ --name-only | grep -q '^Dockerfile$'; then
+            echo "::notice::Dockerfile is not modified"
+            exit
+          fi
+          version=$(sed 's/^[^:]*://' Dockerfile)
+          echo "::notice::actionlint version in Dockerfile: $version"
+          sed -i "s|\\( uses: docker://rhysd/actionlint:\\).*|\\1${version}|g" action.yml
+          if git diff --exit-code; then
+            echo "::notice::no need to update action.yml"
+            exit
+          fi
+          git add action.yml
+          echo "should-push=true" >> "$GITHUB_OUTPUT"
+      - name: Commit and push changes
+        if: steps.version-check.outputs.should-push == 'true'
+        run: |
+          GIT_AUTHOR_NAME=$(git log -1 --pretty=%an) GIT_AUTHOR_EMAIL=$(git log -1 --pretty=%ae) \
+          GIT_COMMITTER_NAME=$(git log -1 --pretty=%cn) GIT_COMMITTER_EMAIL=$(git log -1 --pretty=%ce) \
+            git commit --amend --no-edit
+          git push --force origin "$GITHUB_HEAD_REF"
