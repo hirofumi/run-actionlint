@@ -51,16 +51,21 @@ jobs:
           sed -i "s|\\( uses: docker://rhysd/actionlint:\\).*|\\1${LATEST}|g" action.yml
           git add action.yml
           echo "should-push=true" >> "$GITHUB_OUTPUT"
-      - name: create or update PR
+      - name: Push actionlint-update branch
         if: steps.branch-check.outputs.should-push
+        env:
+          MESSAGE: Bump actionlint ${{ steps.version-check.outputs.from-to }}
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git commit -m "$MESSAGE"
+          git push --force origin actionlint-update
+      - name: Create or update pull request
+        if: steps.version-check.outputs.from-to != ''
         env:
           PR_TITLE: Bump actionlint ${{ steps.version-check.outputs.from-to }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          git config --global user.name "$GITHUB_ACTOR"
-          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git commit -m "$PR_TITLE"
-          git push --force origin actionlint-update
           pr_state=$(gh pr status --json state --jq '.currentBranch.state')
           if [ "$pr_state" = "OPEN" ]; then
             gh pr edit --title "$PR_TITLE"
