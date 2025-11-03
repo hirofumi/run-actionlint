@@ -17,7 +17,7 @@ jobs:
   actionlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: hirofumi/run-actionlint@main
   tag-check:
     if: github.event_name == 'push' && github.ref_name == 'main'
@@ -25,7 +25,7 @@ jobs:
     outputs:
       missing-tag: ${{ steps.tag-check.outputs.missing }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Check if tag exists or not
         id: tag-check
         run: |
@@ -42,7 +42,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Configure git
         run: |
           git config --global user.name "$GITHUB_ACTOR"
